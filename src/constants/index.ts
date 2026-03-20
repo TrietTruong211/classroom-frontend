@@ -55,15 +55,26 @@ export const ALLOWED_TYPES = [
   "image/webp",
 ];
 
-export const CLOUDINARY_UPLOAD_URL = import.meta.env.VITE_CLOUDINARY_UPLOAD_URL;
-export const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-export const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
+const getRequiredEnv = (key: keyof ImportMetaEnv): string => {
+  const value = import.meta.env[key];
 
-export const BASE_URL = import.meta.env.VITE_API_URL;
-export const ACCESS_TOKEN_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY;
-export const REFRESH_TOKEN_KEY = import.meta.env.VITE_REFRESH_TOKEN_KEY;
+  if (!value || !value.trim()) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
 
-export const REFRESH_TOKEN_URL = `${BASE_URL}/refresh-token`;
+  return value;
+};
 
-export const CLOUDINARY_UPLOAD_PRESET = import.meta.env
-  .VITE_CLOUDINARY_UPLOAD_PRESET;
+export const CLOUDINARY_UPLOAD_URL = getRequiredEnv("VITE_CLOUDINARY_UPLOAD_URL");
+export const CLOUDINARY_CLOUD_NAME = getRequiredEnv("VITE_CLOUDINARY_CLOUD_NAME");
+export const BACKEND_BASE_URL = getRequiredEnv("VITE_BACKEND_BASE_URL");
+
+// export const BASE_URL = getRequiredEnv("VITE_API_URL");
+// export const ACCESS_TOKEN_KEY = getRequiredEnv("VITE_ACCESS_TOKEN_KEY");
+// export const REFRESH_TOKEN_KEY = getRequiredEnv("VITE_REFRESH_TOKEN_KEY");
+
+// export const REFRESH_TOKEN_URL = `${BASE_URL}/refresh-token`;
+
+export const CLOUDINARY_UPLOAD_PRESET = getRequiredEnv(
+  "VITE_CLOUDINARY_UPLOAD_PRESET",
+);
