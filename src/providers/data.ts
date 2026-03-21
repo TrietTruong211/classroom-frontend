@@ -1,7 +1,7 @@
 import {createDataProvider, CreateDataProviderOptions} from "@refinedev/rest";
 import { BACKEND_BASE_URL } from "@/constants";
 import { ListResponse } from "@/types";
-import { HttpError } from "@refinedev/core";
+import { CreateResponse, HttpError } from "@refinedev/core";
 
 if (!BACKEND_BASE_URL) {
   throw new Error("Missing required environment variable: VITE_BACKEND_BASE_URL");
@@ -57,6 +57,18 @@ const options: CreateDataProviderOptions = {
       if (!response.ok) throw await buildHttpError(response);
       const payload: ListResponse = await response.clone().json();
       return payload.pagination?.total ?? 0;
+    }
+  },
+
+  create: {
+    getEndpoint: ({resource}) => resource,
+
+    buildBodyParams: async ({ variables }) => variables,
+
+    mapResponse: async (response) => {
+      const json: CreateResponse = await response.json()
+      
+      return json.data ?? []
     }
   }
 }
