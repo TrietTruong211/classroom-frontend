@@ -99,10 +99,12 @@ export const SignInForm = () => {
         <CardContent className={cn("px-0")}>
           <form onSubmit={handleSignIn}>
             <div className={cn("flex", "flex-col", "gap-2")}>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="login-email">Email</Label>
               <Input
-                id="email"
+                id="login-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder=""
                 required
                 value={email}
@@ -112,8 +114,11 @@ export const SignInForm = () => {
             <div
               className={cn("relative", "flex", "flex-col", "gap-2", "mt-6")}
             >
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="login-password">Password</Label>
               <InputPassword
+                id="login-password"
+                name="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

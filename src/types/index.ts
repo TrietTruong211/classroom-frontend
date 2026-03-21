@@ -1,10 +1,12 @@
 export type Subject = {
   id: number;
+  departmentId: number;
   name: string;
   code: string;
-  description: string;
-  department: Department;
-  createdAt?: string;
+  description?: string;
+  department?: Department;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ListResponse<T = unknown> = {
@@ -73,14 +75,14 @@ export enum UserRole {
 
 export type User = {
   id: string;
-  createdAt: string;
-  updatedAt: string;
-  email: string;
   name: string;
+  email: string;
+  emailVerified: boolean;
   role: UserRole;
   image?: string;
   imageCldPubId?: string;
-  department?: Department;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Schedule = {
@@ -91,25 +93,39 @@ export type Schedule = {
 
 export type Department = {
   id: number;
+  code: string;
   name: string;
-  description: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ClassDetails = {
   id: number;
+  subjectId: number;
+  teacherId: string;
+  inviteCode: string;
   name: string;
-  description: string;
-  status: "active" | "inactive";
+  description?: string;
+  status: "active" | "inactive" | "archived";
   capacity: number;
-  courseCode: string;
-  courseName: string;
   bannerUrl?: string;
   bannerCldPubId?: string;
+  schedules: Schedule[];
   subject?: Subject;
   teacher?: User;
-  department?: Department;
-  schedules: Schedule[];
-  inviteCode?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Enrollment = {
+  id: number;
+  studentId: string;
+  classId: number;
+  createdAt: string;
+  updatedAt: string;
+  student?: User;
+  class?: ClassDetails;
 };
 
 export type SignUpPayload = {

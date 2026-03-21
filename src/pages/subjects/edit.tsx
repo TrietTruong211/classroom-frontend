@@ -24,11 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreateView } from "@/components/refine-ui/views/create-view";
+import { EditView } from "@/components/refine-ui/views/edit-view";
 import { Breadcrumb } from "@/components/refine-ui/layout/breadcrumb";
 import { Department } from "@/types";
 
-const subjectCreateSchema = z.object({
+const subjectEditSchema = z.object({
   name: z.string().min(3, "Subject name must be at least 3 characters"),
   code: z.string().min(2, "Subject code must be at least 2 characters"),
   description: z.string().min(5, "Description must be at least 5 characters"),
@@ -40,14 +40,14 @@ const subjectCreateSchema = z.object({
     .min(1, "Department is required"),
 });
 
-const SubjectsCreate = () => {
+const SubjectsEdit = () => {
   const back = useBack();
 
   const form = useForm({
-    resolver: zodResolver(subjectCreateSchema),
+    resolver: zodResolver(subjectEditSchema),
     refineCoreProps: {
       resource: "subjects",
-      action: "create",
+      action: "edit",
     },
   });
 
@@ -66,12 +66,12 @@ const SubjectsCreate = () => {
   const deptsLoading = deptsQuery.isLoading;
 
   return (
-    <CreateView>
+    <EditView>
       <Breadcrumb />
-      <h1 className="page-title">Create Subject</h1>
+      <h1 className="page-title">Edit Subject</h1>
 
       <div className="intro-row">
-        <p>Add a new subject to the curriculum.</p>
+        <p>Update subject information.</p>
         <Button variant="outline" onClick={() => back()}>
           Go Back
         </Button>
@@ -86,7 +86,7 @@ const SubjectsCreate = () => {
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={handleSubmit(async (values: z.infer<typeof subjectCreateSchema>) => {
+              onSubmit={handleSubmit(async (values: z.infer<typeof subjectEditSchema>) => {
                 await onFinish(values);
               })}
               className="space-y-5"
@@ -184,7 +184,7 @@ const SubjectsCreate = () => {
                   {isSubmitting && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Create Subject
+                  Save Changes
                 </Button>
                 <Button type="button" variant="outline" onClick={() => back()}>
                   Cancel
@@ -194,8 +194,8 @@ const SubjectsCreate = () => {
           </Form>
         </CardContent>
       </Card>
-    </CreateView>
+    </EditView>
   );
 };
 
-export default SubjectsCreate;
+export default SubjectsEdit;

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
 import {
   useLink,
@@ -24,6 +25,7 @@ import {
 } from "@refinedev/core";
 
 export const SignUpForm = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -51,8 +53,10 @@ export const SignUpForm = () => {
     }
 
     register({
+      name: name.trim(),
       email,
       password,
+      role: UserRole.STUDENT,
     });
   };
 
@@ -114,10 +118,25 @@ export const SignUpForm = () => {
         <CardContent className={cn("px-0")}>
           <form onSubmit={handleSignUp}>
             <div className={cn("flex", "flex-col", "gap-2")}>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="register-name">Full name</Label>
               <Input
-                id="email"
+                id="register-name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className={cn("flex", "flex-col", "gap-2", "mt-6")}>
+              <Label htmlFor="register-email">Email</Label>
+              <Input
+                id="register-email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder=""
                 required
                 value={email}
@@ -128,9 +147,11 @@ export const SignUpForm = () => {
             <div
               className={cn("relative", "flex", "flex-col", "gap-2", "mt-6")}
             >
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="register-password">Password</Label>
               <InputPassword
-                id="password"
+                id="register-password"
+                name="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -140,9 +161,11 @@ export const SignUpForm = () => {
             <div
               className={cn("relative", "flex", "flex-col", "gap-2", "mt-6")}
             >
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="register-confirm-password">Confirm password</Label>
               <InputPassword
-                id="confirmPassword"
+                id="register-confirm-password"
+                name="confirmPassword"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required

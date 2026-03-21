@@ -6,7 +6,6 @@ import z from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -26,27 +25,25 @@ import {
 } from "@/components/ui/select";
 import { CreateView } from "@/components/refine-ui/views/create-view";
 import { Breadcrumb } from "@/components/refine-ui/layout/breadcrumb";
-import { Department } from "@/types";
+import { Department, UserRole } from "@/types";
 
-const subjectCreateSchema = z.object({
-  name: z.string().min(3, "Subject name must be at least 3 characters"),
-  code: z.string().min(2, "Subject code must be at least 2 characters"),
-  description: z.string().min(5, "Description must be at least 5 characters"),
-  departmentId: z.coerce
-    .number({
-      required_error: "Department is required",
-      invalid_type_error: "Department is required",
-    })
-    .min(1, "Department is required"),
+const userCreateSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["admin", "teacher", "student"], {
+    required_error: "Please select a role",
+  }),
+  departmentId: z.coerce.number().optional(),
 });
 
-const SubjectsCreate = () => {
+const UsersCreate = () => {
   const back = useBack();
 
   const form = useForm({
-    resolver: zodResolver(subjectCreateSchema),
+    resolver: zodResolver(userCreateSchema),
     refineCoreProps: {
-      resource: "subjects",
+      resource: "users",
       action: "create",
     },
   });
@@ -58,20 +55,19 @@ const SubjectsCreate = () => {
     formState: { isSubmitting },
   } = form;
 
-  const { query: deptsQuery, result: deptsResult } = useList<Department>({
+  const { result: deptsResult } = useList<Department>({
     resource: "departments",
     pagination: { pageSize: 100 },
   });
   const departments = deptsResult.data ?? [];
-  const deptsLoading = deptsQuery.isLoading;
 
   return (
     <CreateView>
       <Breadcrumb />
-      <h1 className="page-title">Create Subject</h1>
+      <h1 className="page-title">Create User</h1>
 
       <div className="intro-row">
-        <p>Add a new subject to the curriculum.</p>
+        <p>Add a new user to the platform.</p>
         <Button variant="outline" onClick={() => back()}>
           Go Back
         </Button>
@@ -81,12 +77,12 @@ const SubjectsCreate = () => {
 
       <Card className="max-w-xl">
         <CardHeader>
-          <CardTitle>Subject Details</CardTitle>
+          <CardTitle>User Details</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={handleSubmit(async (values: z.infer<typeof subjectCreateSchema>) => {
+              onSubmit={handleSubmit(async (values: z.infer<typeof userCreateSchema>) => {
                 await onFinish(values);
               })}
               className="space-y-5"
@@ -97,13 +93,46 @@ const SubjectsCreate = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Subject Name <span className="text-destructive">*</span>
+                      Full Name <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Jane Smith" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Email <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Introduction to Programming"
+                        type="email"
+                        placeholder="jane@example.com"
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Password <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -113,15 +142,31 @@ const SubjectsCreate = () => {
               <div className="grid sm:grid-cols-2 gap-4">
                 <FormField
                   control={control}
-                  name="code"
+                  name="role"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Subject Code <span className="text-destructive">*</span>
+                        Role <span className="text-destructive">*</span>
                       </FormLabel>
-                      <FormControl>
-                        <Input placeholder="CS101" {...field} />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
+                          <SelectItem value={UserRole.TEACHER}>
+                            Teacher
+                          </SelectItem>
+                          <SelectItem value={UserRole.STUDENT}>
+                            Student
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -132,13 +177,10 @@ const SubjectsCreate = () => {
                   name="departmentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        Department <span className="text-destructive">*</span>
-                      </FormLabel>
+                      <FormLabel>Department</FormLabel>
                       <Select
                         onValueChange={(v) => field.onChange(Number(v))}
                         value={field.value?.toString()}
-                        disabled={deptsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -147,7 +189,10 @@ const SubjectsCreate = () => {
                         </FormControl>
                         <SelectContent>
                           {departments.map((dept: Department) => (
-                            <SelectItem key={dept.id} value={String(dept.id)}>
+                            <SelectItem
+                              key={dept.id}
+                              value={String(dept.id)}
+                            >
                               {dept.name}
                             </SelectItem>
                           ))}
@@ -159,34 +204,18 @@ const SubjectsCreate = () => {
                 />
               </div>
 
-              <FormField
-                control={control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Description <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Brief description of this subject..."
-                        rows={4}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Create Subject
+                  Create User
                 </Button>
-                <Button type="button" variant="outline" onClick={() => back()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => back()}
+                >
                   Cancel
                 </Button>
               </div>
@@ -198,4 +227,4 @@ const SubjectsCreate = () => {
   );
 };
 
-export default SubjectsCreate;
+export default UsersCreate;

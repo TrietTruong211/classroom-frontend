@@ -1,8 +1,9 @@
 import { AdvancedImage } from "@cloudinary/react";
-import { useShow } from "@refinedev/core";
+import { useCreate, useDelete, useList, useShow } from "@refinedev/core";
 import { useTable } from "@refinedev/react-table";
 import { ColumnDef } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { UserPlus, UserX } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 import { DataTable } from "@/components/refine-ui/data-table/data-table";
@@ -15,9 +16,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { bannerPhoto } from "@/lib/cloudinary";
-import { ClassDetails } from "@/types";
+import { ClassDetails, User, UserRole } from "@/types";
 
 type ClassUser = {
   id: string;
@@ -27,15 +42,55 @@ type ClassUser = {
   image?: string | null;
 };
 
+const getInitials = (name = "") => {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "";
+  return `${parts[0][0] ?? ""}${
+    parts[parts.length - 1][0] ?? ""
+  }`.toUpperCase();
+};
+
 const ClassesShow = () => {
   const { id } = useParams();
   const classId = id ?? "";
 
-  const { query } = useShow<ClassDetails>({
-    resource: "classes",
-  });
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
+  const { query } = useShow<ClassDetails>({ resource: "classes" });
   const classDetails = query.data?.data;
+
+  // Fetch all students available to enroll
+  const { result: studentsResult } = useList<User>({
+    resource: "users",
+    filters: [{ field: "role", operator: "eq", value: UserRole.STUDENT }],
+    pagination: { pageSize: 100 },
+  });
+  const allStudents = studentsResult.data ?? [];
+
+  const { mutate: enroll } = useCreate();
+  const { mutate: unenroll } = useDelete();
+
+  const handleEnroll = () => {
+    if (!selectedStudentId) return;
+    enroll(
+      {
+        resource: "enrollments",
+        values: { classId: Number(classId), studentId: selectedStudentId },
+      },
+      {
+        onSuccess: () => {
+          setEnrollDialogOpen(false);
+          setSelectedStudentId("");
+        },
+      }
+    );
+  };
+
+  const handleUnenroll = (enrollmentId: string) => {
+    unenroll({ resource: "enrollments", id: enrollmentId });
+  };
 
   const studentColumns = useMemo<ColumnDef<ClassUser>[]>(
     () => [
@@ -62,40 +117,43 @@ const ClassesShow = () => {
         ),
       },
       {
-        id: "details",
-        size: 140,
-        header: () => <p className="column-title">Details</p>,
+        id: "actions",
+        size: 200,
+        header: () => <p className="column-title">Actions</p>,
         cell: ({ row }) => (
-          <ShowButton
-            resource="users"
-            recordItemId={row.original.id}
-            variant="outline"
-            size="sm"
-          >
-            View
-          </ShowButton>
+          <div className="flex gap-1">
+            <ShowButton
+              resource="users"
+              recordItemId={row.original.id}
+              variant="outline"
+              size="sm"
+            >
+              View
+            </ShowButton>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => handleUnenroll(row.original.id)}
+            >
+              <UserX className="h-4 w-4 mr-1" />
+              Unenroll
+            </Button>
+          </div>
         ),
       },
     ],
-    []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [classId]
   );
 
   const studentsTable = useTable<ClassUser>({
     columns: studentColumns,
     refineCoreProps: {
       resource: `classes/${classId}/users`,
-      pagination: {
-        pageSize: 3,
-        mode: "server",
-      },
+      pagination: { pageSize: 5, mode: "server" },
       filters: {
-        permanent: [
-          {
-            field: "role",
-            operator: "eq",
-            value: "student",
-          },
-        ],
+        permanent: [{ field: "role", operator: "eq", value: "student" }],
       },
     },
   });
@@ -116,15 +174,9 @@ const ClassesShow = () => {
   }
 
   const teacherName = classDetails.teacher?.name ?? "Unknown";
-  const teacherInitials = teacherName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
 
   const placeholderUrl = `https://placehold.co/600x400?text=${encodeURIComponent(
-    teacherInitials || "NA"
+    teacherName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "NA"
   )}`;
 
   return (
@@ -184,7 +236,6 @@ const ClassesShow = () => {
                   src={classDetails.teacher?.image ?? placeholderUrl}
                   alt={teacherName}
                 />
-
                 <div>
                   <p>{teacherName}</p>
                   <p>{classDetails?.teacher?.email}</p>
@@ -192,14 +243,15 @@ const ClassesShow = () => {
               </div>
             </div>
 
-            <div className="department">
-              <p>🏛️ Department</p>
-
-              <div>
-                <p>{classDetails?.department?.name}</p>
-                <p>{classDetails?.department?.description}</p>
+            {classDetails?.subject?.department && (
+              <div className="department">
+                <p>🏛️ Department</p>
+                <div>
+                  <p>{classDetails.subject.department.name}</p>
+                  <p>{classDetails.subject.department.description}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -208,7 +260,6 @@ const ClassesShow = () => {
         {/* Subject Card */}
         <div className="subject">
           <p>📚 Subject</p>
-
           <div>
             <Badge variant="outline">
               Code: <span>{classDetails?.subject?.code}</span>
@@ -220,10 +271,35 @@ const ClassesShow = () => {
 
         <Separator />
 
+        {/* Invite code */}
+        {classDetails.inviteCode && (
+          <>
+            <div className="join">
+              <h2>🔑 Invite Code</h2>
+              <div className="flex items-center gap-3">
+                <code className="bg-muted px-4 py-2 rounded-md text-lg font-mono tracking-widest">
+                  {classDetails.inviteCode}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      classDetails.inviteCode ?? ""
+                    );
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+
         {/* Join Class Section */}
         <div className="join">
           <h2>🎓 Join Class</h2>
-
           <ol>
             <li>Ask your teacher for the invite code.</li>
             <li>Click on &quot;Join Class&quot; button.</li>
@@ -236,9 +312,56 @@ const ClassesShow = () => {
         </Button>
       </Card>
 
+      {/* Enrolled Students */}
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Enrolled Students</CardTitle>
+
+          {/* Enroll dialog */}
+          <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Enroll Student
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Enroll a Student</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <Select
+                  value={selectedStudentId}
+                  onValueChange={setSelectedStudentId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a student" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allStudents.map((s: User) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} — {s.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEnrollDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEnroll}
+                    disabled={!selectedStudentId}
+                  >
+                    Enroll
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
           <DataTable table={studentsTable} />
@@ -246,15 +369,6 @@ const ClassesShow = () => {
       </Card>
     </ShowView>
   );
-};
-
-const getInitials = (name = "") => {
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 0) return "";
-  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "";
-  return `${parts[0][0] ?? ""}${
-    parts[parts.length - 1][0] ?? ""
-  }`.toUpperCase();
 };
 
 export default ClassesShow;
